@@ -1,9 +1,6 @@
 #include <gst/gst.h>
 #include <stdio.h>
 
-// This is just for checking if the folder exists
-#include <sys/stat.h>
-
 int main (int argc, char *argv[])
 {
     GstElement *pipeline;
@@ -12,12 +9,6 @@ int main (int argc, char *argv[])
 
     /* Initialize GStreamer */
     gst_init (&argc, &argv);
-
-    /* Ensure the output_files directory exists */
-    struct stat st = {0};
-    if (stat("output_files", &st) == -1) {
-        mkdir("output_files", 0700);
-    }
 
     /* Build the pipeline */
     pipeline =

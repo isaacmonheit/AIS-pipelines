@@ -1,9 +1,6 @@
 #include <gst/gst.h>
 #include <stdio.h>
 
-// This is just for checking if the folder exists
-#include <sys/stat.h>
-
 int main (int argc, char *argv[])
 {
     GstElement *pipeline;
@@ -13,18 +10,12 @@ int main (int argc, char *argv[])
     /* Initialize GStreamer */
     gst_init (&argc, &argv);
 
-    /* Ensure the output_files directory exists */
-    struct stat st = {0};
-    if (stat("output_files", &st) == -1) {
-        mkdir("output_files", 0700);
-    }
-
     /* Build the pipeline */
     pipeline =
-        gst_parse_launch("gst-launch-1.0 -v -e \
-            udpsrc port=5001 caps=\"application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96\" ! \
-            rtph264depay ! h264parse ! mp4mux ! filesink location=output.mp4", 
-            NULL);
+        gst_parse_launch("gst-launch-1.0 \
+                udpsrc port=5001 caps=\"application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96\" ! \
+                rtph264depay ! h264parse ! flvmux ! filesink location=output.flv", 
+                NULL);
 
     /* Start playing */
     gst_element_set_state (pipeline, GST_STATE_PLAYING);
