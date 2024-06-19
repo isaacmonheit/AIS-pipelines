@@ -3,5 +3,6 @@ tests/demo_c
 tests/demo_appss
 tests/grog
 
-tests/output.mp4
-tests/output.flv
+tests/output.*
+final3/output.*
+final3/shell_test/output.*
