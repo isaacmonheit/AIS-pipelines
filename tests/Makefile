@@ -13,4 +13,6 @@ grog: scratch.cpp
 	g++ scratch.cpp -o grog $(ARGS)
 
 clean:
-	rm -f demo_c demo_cpp demo_appss
+	rm -f demo_c demo_cpp demo_appss grog output.mp4 output.flv
+
+.PHONY: clean
