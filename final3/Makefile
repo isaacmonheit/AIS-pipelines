@@ -10,6 +10,6 @@ spoon: spoon.cpp
 	g++ -o $@ $^ $(ARGS)
 
 clean:
-	rm fork output_files/*
+	rm -f fork knife spoon output.*
 
 .PHONY: clean
