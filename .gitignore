@@ -11,3 +11,5 @@ cutlery/knife
 cutlery/shell_test/output.*
 
 tests/multiudp/output.*
+
+pipeline-class/main
