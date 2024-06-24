@@ -4,7 +4,10 @@ tests/demo_appss
 tests/grog
 
 tests/output.*
-final3/output.*
+final3/output*
+final3/fork
+final3/spoon
+final3/knife
 final3/shell_test/output.*
 
 tests/multiudp/output.*
