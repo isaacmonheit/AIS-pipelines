@@ -12,9 +12,9 @@ int main (int argc, char *argv[])
 
     /* Build the pipeline */
     pipeline =
-        gst_parse_launch("gst-launch-1.0 \
-                udpsrc port=5001 caps=\"application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96\" ! \
-                rtph264depay ! h264parse ! flvmux ! filesink location=output.flv", 
+        gst_parse_launch("gst-launch-1.0 -v -e \
+                udpsrc port=5001 caps=\"application/x-rtp,media=video,clock-rate=90000,encoding-name=H264,payload=96\" ! \
+                rtph264depay ! video/x-h264,stream-format=byte-stream,alignment=au ! mpegtsmux ! filesink location=output.ts", 
                 NULL);
 
     /* Start playing */
