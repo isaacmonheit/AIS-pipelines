@@ -5,7 +5,7 @@ Pipeline::Pipeline(Pipeline::PipelineType pt)
     // Initialize GStreamer
     gst_init (nullptr, nullptr);
 
-    // Feels good to do this shit
+    // Init err as nullptr just to be sure
     err = nullptr;
 
     // Build the pipeline
@@ -53,9 +53,6 @@ Pipeline::Pipeline(Pipeline::PipelineType pt)
 
 Pipeline::~Pipeline()
 {
-    // Actually stop the pipeline
-    gst_element_set_state (pipeline, GST_STATE_NULL);
-    
     // Get that end of pipeline message, girl!
     msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
             static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
@@ -87,9 +84,23 @@ Pipeline::~Pipeline()
         }
         gst_message_unref(msg);
     }
+
+
+    // Actually stop the pipeline
+    gst_element_set_state (pipeline, GST_STATE_NULL);
     
     // Free resources
     gst_message_unref(msg);
     gst_object_unref(bus);
     gst_object_unref(pipeline);
+}
+
+static void Pipeline::signalHandler(int signum) {
+    std::cout << "\nInterrupt signal (" << signum << ") received.\n";
+
+    // Clean up and close up stuff here
+    // fizz buzz
+
+    // Terminate program
+    std::exit(signum);
 }
