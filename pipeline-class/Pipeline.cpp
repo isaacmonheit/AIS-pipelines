@@ -1,3 +1,15 @@
+/*  
+ *  Pipeline.cpp
+ *
+ *  ForkedSource creates a pipeline, which, for now, streams video from v4l2src
+ *  (default video camera) and into a udpsink which redirects to the machine it
+ *  was run on on ports 5000 and 5001.
+ *
+ *  FileSaver listens on port 5001 and saves the video streamed in to a ts file
+ *
+ *  Viewer listens on port 5000 and plays the video live on the screen.
+ */
+
 #include <filesystem>
 
 #include "Pipeline.h"

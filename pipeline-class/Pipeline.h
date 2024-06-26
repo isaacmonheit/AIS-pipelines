@@ -1,7 +1,18 @@
+/* 
+ *  Pipeline.h
+ *
+ *  The Pipeline class contains an instance of a gstreamer pipeline which is
+ *  automatically played on contruction of the class and stopped at deletion.
+ *
+ *  The details of the pipeline are defined by the PipelineType enum passed into
+ *  the contructor. Exactly what each pipeline does can be read through in
+ *  Pipeline.cpp
+ *
+ */
+
 #include <gst/gst.h>
 #include <stdio.h>
-#include <iostream>
-#include <csignal>
+#include <string>
 
 class Pipeline
 {
