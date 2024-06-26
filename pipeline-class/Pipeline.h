@@ -22,4 +22,8 @@ private:
     GError *err;
 
     static void signalHandler(int signum);
+
+    std::string next_available_filepath();
+
+    const std::string base_filepath = "outputs/output";
 };

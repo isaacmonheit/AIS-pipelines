@@ -1,41 +1,42 @@
+#include <filesystem>
+
 #include "Pipeline.h"
 
 Pipeline::Pipeline(Pipeline::PipelineType pt)
 {
     // Initialize GStreamer
-    gst_init (nullptr, nullptr);
+    gst_init(nullptr, nullptr);
 
     // Init err as nullptr just to be sure
     err = nullptr;
 
-    // Build the pipeline
+
+    std::string pipeline_str = "";
+
+    // Set pipeline string
     switch (pt)
     {
         case Fork:
-            std::cerr << "Squeeze me like the Kennedys\n";
-            pipeline =
-                gst_parse_launch("v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 ! "
-                        "videoconvert ! x264enc ! video/x-h264,stream-format=byte-stream,alignment=au ! "
-                        "rtph264pay ! multiudpsink clients=127.0.0.1:5000,127.0.0.1:5001",
-                        &err);
-            std::cerr << "Call me the flower twice\n";
+            pipeline_str = "v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 ! "
+                           "videoconvert ! x264enc ! video/x-h264,stream-format=byte-stream,alignment=au ! "
+                           "rtph264pay ! multiudpsink clients=127.0.0.1:5000,127.0.0.1:5001";
             break;
         case Knife:
-            pipeline =
-                gst_parse_launch("udpsrc port=5001 caps=\"application/x-rtp,media=video,clock-rate=90000,encoding-name=H264,payload=96\" ! "
-                        "rtph264depay ! video/x-h264,stream-format=byte-stream,alignment=au ! mpegtsmux ! filesink location=output.ts", 
-                        &err);
+            pipeline_str = "udpsrc port=5001 caps=\"application/x-rtp,media=video,clock-rate=90000,encoding-name=H264,payload=96\" ! "
+                           "rtph264depay ! video/x-h264,stream-format=byte-stream,alignment=au ! mpegtsmux ! filesink location="
+                           + next_available_filepath();
             break;
         case Spoon:
-            pipeline =
-                gst_parse_launch("udpsrc port=5000 caps = \"application/x-rtp, media=(string)video, clock-rate=(int)90000, "
-                        "encoding-name=(string)H264, payload=(int)96\" ! rtph264depay ! decodebin ! videoconvert ! autovideosink",
-                        &err);
+            pipeline_str = "udpsrc port=5000 caps = \"application/x-rtp, media=(string)video, clock-rate=(int)90000, "
+                           "encoding-name=(string)H264, payload=(int)96\" ! rtph264depay ! decodebin ! videoconvert ! autovideosink";
             break;
         default:
-            std::cerr << "You should not be here. (Pipeline type invalid)" << std::endl;
+            std::cerr << "ERROR: Invalid Pipeline object type" << std::endl;
             exit(EXIT_FAILURE);
     }
+
+    // Start pipeline
+    pipeline = gst_parse_launch(pipeline_str.c_str(), &err);
 
     if (err != NULL)
     {
@@ -54,7 +55,6 @@ Pipeline::Pipeline(Pipeline::PipelineType pt)
 Pipeline::~Pipeline()
 {
     // Actually stop the pipeline
-    gst_element_set_state (pipeline, GST_STATE_NULL);
     gst_element_send_event(pipeline, gst_event_new_eos());
 
 
@@ -62,7 +62,6 @@ Pipeline::~Pipeline()
     msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
             static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
     std::cout << "Fries are better than marshmallows\n";
-    
     
     // Parse and print message
     if (msg != NULL)
@@ -89,11 +88,14 @@ Pipeline::~Pipeline()
                 g_printerr("Unexpected message received.\n");
                 break;
         }
-        std::cout << "Fries are better than marshmallows\n";
+        std::cerr << "Fries are better than marshmallows\n";
 
         gst_message_unref(msg);
     }
 
+    std::cerr << "I'm gonna do it.\n";
+
+    gst_element_set_state (pipeline, GST_STATE_NULL);
 
     std::cout << "don't hurt tod!\n";
 
@@ -111,4 +113,19 @@ void Pipeline::signalHandler(int signum) {
 
     // Terminate program
     std::exit(signum);
+}
+
+std::string Pipeline::next_available_filepath() {
+    int file_counter = 0;
+    
+    while (true) {		
+        std::filesystem::path filepath(base_filepath
+                + std::to_string(file_counter) + ".ts");
+
+        if (!std::filesystem::exists(filepath)) {
+            return filepath.string();
+        }
+
+        file_counter++;
+    }
 }

@@ -10,8 +10,13 @@ int main(int argc, char *argv[])
     sleep(5);
     std::cout << "I am famished!" << std::endl;
 
+    std::cerr << "Deletionary fairy...\n";
+
+    std::cerr << "kili\n";
     delete kili;
+    std::cerr << "epo\n";
     delete epo;
+    std::cerr << "pipi\n";
     delete pipi;
 
     return 0;
