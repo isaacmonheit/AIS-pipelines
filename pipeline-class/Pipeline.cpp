@@ -53,9 +53,16 @@ Pipeline::Pipeline(Pipeline::PipelineType pt)
 
 Pipeline::~Pipeline()
 {
+    // Actually stop the pipeline
+    gst_element_set_state (pipeline, GST_STATE_NULL);
+    gst_element_send_event(pipeline, gst_event_new_eos());
+
+
     // Get that end of pipeline message, girl!
     msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
             static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
+    std::cout << "Fries are better than marshmallows\n";
+    
     
     // Parse and print message
     if (msg != NULL)
@@ -82,20 +89,21 @@ Pipeline::~Pipeline()
                 g_printerr("Unexpected message received.\n");
                 break;
         }
+        std::cout << "Fries are better than marshmallows\n";
+
         gst_message_unref(msg);
     }
 
 
-    // Actually stop the pipeline
-    gst_element_set_state (pipeline, GST_STATE_NULL);
-    
+    std::cout << "don't hurt tod!\n";
+
     // Free resources
     gst_message_unref(msg);
     gst_object_unref(bus);
     gst_object_unref(pipeline);
 }
 
-static void Pipeline::signalHandler(int signum) {
+void Pipeline::signalHandler(int signum) {
     std::cout << "\nInterrupt signal (" << signum << ") received.\n";
 
     // Clean up and close up stuff here
