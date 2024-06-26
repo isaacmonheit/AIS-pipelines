@@ -3,21 +3,19 @@
 
 int main(int argc, char *argv[])
 {
-    Pipeline* pipi = new Pipeline(Pipeline::Fork);
-    Pipeline* epo = new Pipeline(Pipeline::Spoon);
-    Pipeline* kili = new Pipeline(Pipeline::Knife);
+    Pipeline* fork = new Pipeline(Pipeline::ForkedSource);
+    Pipeline* filesaver = new Pipeline(Pipeline::FileSaver);
+    Pipeline* viewer = new Pipeline(Pipeline::Viewer);
 
     sleep(5);
     std::cout << "I am famished!" << std::endl;
 
-    std::cerr << "Deletionary fairy...\n";
-
-    std::cerr << "kili\n";
-    delete kili;
-    std::cerr << "epo\n";
-    delete epo;
-    std::cerr << "pipi\n";
-    delete pipi;
+    std::cerr << "deleting fork\n";
+    delete fork;
+    std::cerr << "deleting filesaver\n";
+    delete filesaver;
+    std::cerr << "deleting viewer\n";
+    delete viewer;
 
     return 0;
 }

@@ -7,9 +7,9 @@ class Pipeline
 {
 public:
     enum PipelineType {
-        Fork,
-        Knife,
-        Spoon
+        ForkedSource,
+        FileSaver,
+        Viewer
     };
 
     Pipeline(Pipeline::PipelineType pt);
@@ -20,8 +20,6 @@ private:
     GstBus *bus;
     GstMessage *msg;
     GError *err;
-
-    static void signalHandler(int signum);
 
     std::string next_available_filepath();
 

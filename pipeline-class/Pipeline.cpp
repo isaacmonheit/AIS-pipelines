@@ -7,31 +7,30 @@ Pipeline::Pipeline(Pipeline::PipelineType pt)
     // Initialize GStreamer
     gst_init(nullptr, nullptr);
 
-    // Init err as nullptr just to be sure
+    // Store potential errors here
     err = nullptr;
-
 
     std::string pipeline_str = "";
 
     // Set pipeline string
     switch (pt)
     {
-        case Fork:
+        case ForkedSource:
             pipeline_str = "v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 ! "
                            "videoconvert ! x264enc ! video/x-h264,stream-format=byte-stream,alignment=au ! "
                            "rtph264pay ! multiudpsink clients=127.0.0.1:5000,127.0.0.1:5001";
             break;
-        case Knife:
+        case FileSaver:
             pipeline_str = "udpsrc port=5001 caps=\"application/x-rtp,media=video,clock-rate=90000,encoding-name=H264,payload=96\" ! "
                            "rtph264depay ! video/x-h264,stream-format=byte-stream,alignment=au ! mpegtsmux ! filesink location="
                            + next_available_filepath();
             break;
-        case Spoon:
+        case Viewer:
             pipeline_str = "udpsrc port=5000 caps = \"application/x-rtp, media=(string)video, clock-rate=(int)90000, "
                            "encoding-name=(string)H264, payload=(int)96\" ! rtph264depay ! decodebin ! videoconvert ! autovideosink";
             break;
         default:
-            std::cerr << "ERROR: Invalid Pipeline object type" << std::endl;
+            g_print("ERROR: Invalid Pipeline object type\n");
             exit(EXIT_FAILURE);
     }
 
@@ -54,14 +53,13 @@ Pipeline::Pipeline(Pipeline::PipelineType pt)
 
 Pipeline::~Pipeline()
 {
-    // Actually stop the pipeline
+    // We send an EOS to close each pipeline
     gst_element_send_event(pipeline, gst_event_new_eos());
 
 
-    // Get that end of pipeline message, girl!
+    // Get the end of pipeline message
     msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE,
             static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
-    std::cout << "Fries are better than marshmallows\n";
     
     // Parse and print message
     if (msg != NULL)
@@ -88,31 +86,15 @@ Pipeline::~Pipeline()
                 g_printerr("Unexpected message received.\n");
                 break;
         }
-        std::cerr << "Fries are better than marshmallows\n";
 
         gst_message_unref(msg);
     }
 
-    std::cerr << "I'm gonna do it.\n";
-
     gst_element_set_state (pipeline, GST_STATE_NULL);
 
-    std::cout << "don't hurt tod!\n";
-
     // Free resources
-    gst_message_unref(msg);
     gst_object_unref(bus);
     gst_object_unref(pipeline);
-}
-
-void Pipeline::signalHandler(int signum) {
-    std::cout << "\nInterrupt signal (" << signum << ") received.\n";
-
-    // Clean up and close up stuff here
-    // fizz buzz
-
-    // Terminate program
-    std::exit(signum);
 }
 
 std::string Pipeline::next_available_filepath() {
