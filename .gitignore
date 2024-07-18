@@ -8,10 +8,8 @@ cutlery/output*
 cutlery/fork
 cutlery/spoon
 cutlery/knife
-cutlery/shell_test/output.*
-
-tests/multiudp/output.*
 
 pipeline-class/main
-pipeline-class/output*
 pipeline-class/*.ts
+
+**/output*
