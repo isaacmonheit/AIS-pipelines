@@ -10,14 +10,88 @@ int main (int argc, char *argv[])
     /* Initialize GStreamer */
     gst_init (&argc, &argv);
 
-    /* Build the pipeline */
-    pipeline =
-        gst_parse_launch("v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 ! videoconvert ! x264enc ! "
-                "video/x-h264,stream-format=byte-stream,alignment=au ! rtph264pay ! multiudpsink clients=127.0.0.1:5000,127.0.0.1:5001",
-                NULL);
+    /* Create pipeline */
+    GstElement *pipeline = gst_pipeline_new("video-pipeline");
+
+    /* Create elements */
+    GstElement *v4l2src = gst_element_factory_make("v4l2src", "source");
+    GstElement *videoconvert = gst_element_factory_make("videoconvert", "convert");
+    GstElement *x264enc = gst_element_factory_make("x264enc", "encoder");
+    GstElement *interpipesink = gst_element_factory_make("interpipesink", "interpipesink");
+
+    GstElement *interpipesrc1 = gst_element_factory_make("interpipesrc", "interpipesrc1");
+    GstElement *filesink = gst_element_factory_make("filesink", "file-output");
+
+    GstElement *interpipesrc2 = gst_element_factory_make("interpipesrc", "interpipesrc2");
+    GstElement *rtph264pay = gst_element_factory_make("rtph264pay", "payloader");
+    GstElement *udpsink = gst_element_factory_make("udpsink", "udp-output");
+
+    if (!pipeline || !v4l2src || !videoconvert || !x264enc || !interpipesink ||
+        !interpipesrc1 || !filesink || !interpipesrc2 || !rtph264pay || !udpsink)
+    {
+        g_printerr("Not all elements could be created.\n");
+        return -1;
+    }
+
+    /* Set caps */
+    GstCaps *caps = gst_caps_new_simple("video/x-raw",
+                                        "width", G_TYPE_INT, 640,
+                                        "height", G_TYPE_INT, 480,
+                                        "framerate", GST_TYPE_FRACTION, 30, 1,
+                                        NULL);
+
+    /* Set properties */
+    g_object_set(v4l2src, "device", "/dev/video0", NULL);
+    g_object_set(filesink, "location", "output.h264", NULL);
+    g_object_set(udpsink, "host", "localhost", "port", 5000, NULL);
+
+    g_object_set(interpipesink, "name", "source_pipe", NULL);
+    g_object_set(interpipesrc1, "listen-to", "source_pipe", NULL);
+    g_object_set(interpipesrc2, "listen-to", "source_pipe", NULL);
+
+    /* Add elements to the pipeline */
+    // add caps too?
+    gst_bin_add_many(GST_BIN(pipeline), v4l2src, videoconvert, x264enc, interpipesink,
+                     interpipesrc1, filesink, interpipesrc2, rtph264pay, udpsink, NULL);
+
+    /* Link elements */
+    if (!gst_element_link_filtered(v4l2src, videoconvert, caps))
+    {
+        g_printerr("Failed to link v4l2src and videoconvert with caps.\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+    gst_caps_unref(caps);
+
+    if (!gst_element_link_many(videoconvert, x264enc, interpipesink, NULL))
+    {
+        g_printerr("Failed to link videoconvert, x264enc, and interpipesink.\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+
+    if (!gst_element_link(interpipesrc1, filesink))
+    {
+        g_printerr("Failed to link interpipesrc1 and filesink.\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
+
+    if (!gst_element_link_many(interpipesrc2, rtph264pay, udpsink, NULL))
+    {
+        g_printerr("Failed to link interpipesrc2, rtph264pay, and udpsink.\n");
+        gst_object_unref(pipeline);
+        return -1;
+    }
 
     /* Start playing */
-    gst_element_set_state (pipeline, GST_STATE_PLAYING);
+    GstStateChangeReturn *ret = gst_element_set_state (pipeline, GST_STATE_PLAYING);
+    if (ret == GST_STATE_CHANGE_FAILURE)
+    {
+        g_printerr ("Unable to set the pipeline to the playing state.\n");
+        gst_object_unref (pipeline);
+        return -1;
+    }
 
     /* Wait until error or EOS */
     bus = gst_element_get_bus (pipeline);
@@ -25,7 +99,8 @@ int main (int argc, char *argv[])
             static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
 
     /* Parse message */
-    if (msg != NULL) {
+    if (msg != NULL)
+    {
         GError *err;
         gchar *debug_info;
 
