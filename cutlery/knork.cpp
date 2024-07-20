@@ -11,7 +11,7 @@ int main (int argc, char *argv[])
     gst_init (&argc, &argv);
 
     /* Create pipeline */
-    GstElement *pipeline = gst_pipeline_new("video-pipeline");
+    pipeline = gst_pipeline_new("video-pipeline");
 
     /* Create elements */
     GstElement *v4l2src = gst_element_factory_make("v4l2src", "source");
@@ -50,7 +50,6 @@ int main (int argc, char *argv[])
     g_object_set(interpipesrc2, "listen-to", "source_pipe", NULL);
 
     /* Add elements to the pipeline */
-    // add caps too?
     gst_bin_add_many(GST_BIN(pipeline), v4l2src, videoconvert, x264enc, interpipesink,
                      interpipesrc1, filesink, interpipesrc2, rtph264pay, udpsink, NULL);
 
@@ -85,7 +84,7 @@ int main (int argc, char *argv[])
     }
 
     /* Start playing */
-    GstStateChangeReturn *ret = gst_element_set_state (pipeline, GST_STATE_PLAYING);
+    GstStateChangeReturn ret = gst_element_set_state (pipeline, GST_STATE_PLAYING);
     if (ret == GST_STATE_CHANGE_FAILURE)
     {
         g_printerr ("Unable to set the pipeline to the playing state.\n");

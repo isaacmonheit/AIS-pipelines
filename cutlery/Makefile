@@ -2,13 +2,13 @@ ARGS = -Wall `pkg-config --cflags --libs gstreamer-1.0`
 
 all: fork knife spoon
 
-spork: spork.cpp
+knork: knork.cpp
 	g++ -o $@ $^ $(ARGS)
 
-knife: knife.cpp
+spoon: spoon.cpp
 	g++ -o $@ $^ $(ARGS)
 
-#spoon: spoon.cpp
+#knife: knife.cpp
 #	g++ -o $@ $^ $(ARGS)
 
 clean:

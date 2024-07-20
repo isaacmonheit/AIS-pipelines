@@ -8,8 +8,11 @@ cutlery/output*
 cutlery/fork
 cutlery/spoon
 cutlery/knife
+cutlery/knork
 
 pipeline-class/main
 pipeline-class/*.ts
+
+manual-pipeline/manual_test
 
 **/output*
