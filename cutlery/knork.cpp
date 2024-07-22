@@ -69,7 +69,6 @@ int main(int argc, char *argv[])
   if (!pipeline2 || ! interpipesrc2 || !vidconvert2 || !x264enc || !enccaps || !mpegtsmux || !filesink)
   {
     g_printerr("Not all elements in pipeline2 could be created.\n");
-    std::cerr << (bool) pipeline2 << (bool) interpipesrc2 << (bool) vidconvert2 << (bool) x264enc << (bool) enccaps << (bool) mpegtsmux << (bool) filesink << "\n";
     return -1;
   }
   
@@ -96,6 +95,7 @@ int main(int argc, char *argv[])
   /* Link elements in pipeline0 */
   if (gst_element_link_filtered(source, interpipesink, srccaps) != TRUE) {
     g_printerr ("source and interpipesink could not be linked.\n");
+
     gst_object_unref (pipeline0);
     gst_object_unref (pipeline1);
     gst_object_unref (pipeline2);
@@ -110,6 +110,7 @@ int main(int argc, char *argv[])
   /* Link pipeline 1 */
   if (gst_element_link_many(interpipesrc1, vidconvert1, avsink, NULL) != TRUE) {
     g_printerr("interpipesrc1, vidconvert1, and avsink could not be linked.\n");
+
     gst_object_unref (pipeline0);
     gst_object_unref (pipeline1);
     gst_object_unref (pipeline2);
@@ -121,6 +122,7 @@ int main(int argc, char *argv[])
   /* Link pipeline 2 */
   if (gst_element_link_many(interpipesrc2, vidconvert2, x264enc, NULL) != TRUE) {
     g_printerr ("interpipesrc2, vidconvert2, and x264enc could not be linked.\n");
+
     gst_object_unref (pipeline0);
     gst_object_unref (pipeline1);
     gst_object_unref (pipeline2);
@@ -131,6 +133,7 @@ int main(int argc, char *argv[])
 
   if (gst_element_link_filtered(x264enc, mpegtsmux, enccaps) != TRUE) {
     g_printerr ("x264enc and mpegtsmux could not be linked.\n");
+
     gst_object_unref (pipeline0);
     gst_object_unref (pipeline1);
     gst_object_unref (pipeline2);
@@ -143,6 +146,7 @@ int main(int argc, char *argv[])
 
   if (gst_element_link(mpegtsmux, filesink) != TRUE) {
     g_printerr("mpegtsmux and filesink could not be linked.\n");
+
     gst_object_unref (pipeline0);
     gst_object_unref (pipeline1);
     gst_object_unref (pipeline2);
@@ -153,14 +157,17 @@ int main(int argc, char *argv[])
   ret = gst_element_set_state (pipeline0, GST_STATE_PLAYING);
   if (ret == GST_STATE_CHANGE_FAILURE) {
     g_printerr ("Unable to set the pipeline to the playing state.\n");
+
     gst_object_unref (pipeline0);
     gst_object_unref (pipeline1);
     gst_object_unref (pipeline2);
+
     return -1;
   }
   ret = gst_element_set_state (pipeline1, GST_STATE_PLAYING);
   if (ret == GST_STATE_CHANGE_FAILURE) {
     g_printerr ("Unable to set the pipeline to the playing state.\n");
+
     gst_element_set_state(pipeline0, GST_STATE_NULL);
 
     gst_object_unref (pipeline0);
@@ -171,6 +178,7 @@ int main(int argc, char *argv[])
   ret = gst_element_set_state (pipeline2, GST_STATE_PLAYING);
   if (ret == GST_STATE_CHANGE_FAILURE) {
     g_printerr ("Unable to set the pipeline to the playing state.\n");
+
     gst_element_set_state(pipeline0, GST_STATE_NULL);
     gst_element_set_state(pipeline1, GST_STATE_NULL);
 
@@ -205,9 +213,11 @@ int main(int argc, char *argv[])
   gst_object_unref (bus0);
   gst_object_unref (bus1);
   gst_object_unref (bus2);
+
   gst_element_set_state (pipeline0, GST_STATE_NULL);
   gst_element_set_state (pipeline1, GST_STATE_NULL);
   gst_element_set_state (pipeline2, GST_STATE_NULL);
+
   gst_object_unref(pipeline0);
   gst_object_unref(pipeline1);
   gst_object_unref(pipeline2);
