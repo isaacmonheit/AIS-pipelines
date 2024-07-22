@@ -1,5 +1,4 @@
 #include <gst/gst.h>
-
 #include <iostream>
 
 int main(int argc, char *argv[])
@@ -46,12 +45,12 @@ int main(int argc, char *argv[])
   
   /* Modify the elements' properties */
   g_object_set(source, "device", "/dev/video0", NULL);
-
-  //g_object_set(filesink, "location", "output.h264", NULL);
-
   g_object_set(interpipesink, "name", "source_pipe", NULL);
+
   g_object_set(interpipesrc1, "listen-to", "source_pipe", NULL);
+
   //g_object_set(interpipesrc2, "listen-to", "source_pipe", NULL);
+  //g_object_set(filesink, "location", "output.h264", NULL);
 
   std::cerr << "1\n";
 
@@ -133,5 +132,6 @@ int main(int argc, char *argv[])
   gst_object_unref (bus);
   gst_element_set_state (pipeline, GST_STATE_NULL);
   gst_object_unref (pipeline);
+
   return 0;
 }
