@@ -1,36 +1,19 @@
 #include <gst/gst.h>
-#include <iostream>
-#include <csignal>
-
-GstElement *pipeline;
-
-void signalHandler(int signum) {
-    gst_element_send_event(pipeline, gst_event_new_eos());
-}
+#include <stdio.h>
 
 int main (int argc, char *argv[])
 {
-
+    GstElement *pipeline;
     GstBus *bus;
     GstMessage *msg;
-
-    /* Signal handler to catch Ctrl-C */
-    signal(SIGINT, signalHandler);
-
 
     /* Initialize GStreamer */
     gst_init (&argc, &argv);
 
     /* Build the pipeline */
     pipeline =
-        gst_parse_launch(
-                "v4l2src device=/dev/video0 "
-                "! video/x-raw,width=640,height=480,framerate=30/1 "
-                "! videoconvert "
-                "! x264enc "
-                //"! video/x-h264,stream-format=byte-stream "
-                "! mp4mux "
-                "! filesink location=output.mp4",
+        gst_parse_launch("v4l2src device=/dev/video0 ! video/x-raw,width=640,height=480,framerate=30/1 ! videoconvert ! x264enc ! "
+                "video/x-h264,stream-format=byte-stream,alignment=au ! rtph264pay ! multiudpsink clients=127.0.0.1:5000,127.0.0.1:5001",
                 NULL);
 
     /* Start playing */
@@ -68,13 +51,9 @@ int main (int argc, char *argv[])
     }
 
     /* Free resources */
-    std::cout << "1\n";
+    gst_message_unref (msg);
     gst_object_unref (bus);
-    std::cout << "3\n";
     gst_element_set_state (pipeline, GST_STATE_NULL);
-    std::cout << "4\n";
     gst_object_unref (pipeline);
-    std::cout << "5\n";
-
     return 0;
 }
