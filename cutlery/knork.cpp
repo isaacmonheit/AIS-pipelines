@@ -185,15 +185,15 @@ int main(int argc, char *argv[])
   bus1 = gst_element_get_bus(pipeline1);
   bus2 = gst_element_get_bus(pipeline2);
 
-  /* BEWARE!! these might not pop in the right order... */
+  /* The order doesn't seem to matter */
   msg0 =
       gst_bus_timed_pop_filtered(bus0, GST_CLOCK_TIME_NONE,
       static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
-  msg2 =
-      gst_bus_timed_pop_filtered(bus2, GST_CLOCK_TIME_NONE,
-      static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
   msg1 =
       gst_bus_timed_pop_filtered(bus1, GST_CLOCK_TIME_NONE,
+      static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
+  msg2 =
+      gst_bus_timed_pop_filtered(bus2, GST_CLOCK_TIME_NONE,
       static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
 
     
