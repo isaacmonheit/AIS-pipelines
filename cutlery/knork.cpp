@@ -4,6 +4,7 @@
 
 void parseMessage(GstMessage *msg);
 void signalHandler(int signum);
+static void linkElements(GstElement* element,GstPad* sourcePad, gpointer sinkElement);
 
 GstElement *pipeline0;
 GstElement *pipeline1;
@@ -56,7 +57,9 @@ int main(int argc, char *argv[])
                                            "alignment", G_TYPE_STRING, "au",
                                            NULL);
 
-    GstCaps *dmuxcaps = gst_caps_new_empty_simple("video/x-h264");
+    GstCaps *dmuxcaps = gst_caps_new_simple("video/x-h264",
+                                            "stream-format", G_TYPE_STRING, "byte_stream",
+                                            NULL);
 
     /* Ensure elements were created */
     if (!pipeline0 || !source || !srccaps || !vidconvert || !x264enc || !mpegtsmux || !interpipesink)
@@ -86,8 +89,8 @@ int main(int argc, char *argv[])
   
     g_object_set(interpipesrc1, "listen-to", "source_pipe", NULL);
     g_object_set(h264parse, "disable-passthrough", TRUE, NULL);
-    g_object_set(udpsink, "host", "localhost",
-                          "port", 5001,
+    g_object_set(udpsink, "host", "127.0.0.1",
+                          "port", 5000,
                           NULL);
   
     g_object_set(interpipesrc2, "listen-to", "source_pipe",
@@ -153,7 +156,7 @@ int main(int argc, char *argv[])
     }
   
     /* Link pipeline 1 */
-    if (gst_element_link_filtered(interpipesrc1, tsdemux, dmuxcaps) != TRUE) {
+    if (gst_element_link(interpipesrc1, tsdemux) != TRUE) {
         g_printerr("interpipesrc1 and tsdemux could not be linked.\n");
   
         gst_object_unref(pipeline0);
@@ -163,9 +166,8 @@ int main(int argc, char *argv[])
         gst_caps_unref(dmuxcaps);
         return -1;
     }
-    gst_caps_unref(dmuxcaps);
 
-    if (gst_element_link_many(tsdemux, h264parse, rtph264pay, udpsink, NULL) != TRUE) {
+    if (gst_element_link_many(h264parse, rtph264pay, udpsink, NULL) != TRUE) {
         g_printerr("tsdemux, h264parse, rtph264pay, and udpsink could not be linked.\n");
   
         gst_object_unref(pipeline0);
@@ -173,6 +175,13 @@ int main(int argc, char *argv[])
         gst_object_unref(pipeline2);
         return -1;
     }
+
+    // doesn't return if it errors in linking
+    g_signal_connect(tsdemux,"pad-added",G_CALLBACK(linkElements),h264parse);
+    gst_caps_unref(dmuxcaps);
+
+  
+
   
     /* Link pipeline 2 */
     if (gst_element_link(interpipesrc2, filesink) != TRUE) {
@@ -294,4 +303,12 @@ void parseMessage(GstMessage *msg)
         }
         gst_message_unref(msg);
     }
+}
+
+// needed in order to link elements with dynamically created pads
+// i.e. tsdemux and h264parse
+static void linkElements(GstElement* element,GstPad* sourcePad, gpointer sinkElement){
+    GstPad* sinkPad=gst_element_get_static_pad((GstElement*)sinkElement,"sink");
+    gst_pad_link(sourcePad,sinkPad);
+    gst_object_unref(sinkPad);
 }
