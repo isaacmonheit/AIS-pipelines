@@ -32,16 +32,16 @@ int main(int argc, char *argv[])
     GstElement *source = gst_element_factory_make("v4l2src", "source");
     GstElement *vidconvert = gst_element_factory_make("videoconvert", "vidconvert");
     GstElement *x264enc = gst_element_factory_make("x264enc", "encoder");
+    GstElement *mpegtsmux = gst_element_factory_make("mpegtsmux", "mpegtsmux");
     GstElement *interpipesink = gst_element_factory_make("interpipesink", "interpipesink");
   
     GstElement *interpipesrc1 = gst_element_factory_make("interpipesrc", "interpipesrc1");
-    GstElement *fakesink1 = gst_element_factory_make("fakesink", "fakesink1");
+    GstElement *tsdemux = gst_element_factory_make("tsdemux", "tsdemux");
+    GstElement *h264parse = gst_element_factory_make("h264parse", "h264parse");
     GstElement *rtph264pay = gst_element_factory_make("rtph264pay", "rtph264pay");
     GstElement *udpsink = gst_element_factory_make("udpsink", "udpsink");
   
     GstElement *interpipesrc2 = gst_element_factory_make("interpipesrc", "interpipesrc2");
-    GstElement *fakesink2 = gst_element_factory_make("fakesink", "fakesink2");
-    GstElement *mpegtsmux = gst_element_factory_make("mpegtsmux", "mpegtsmux");
     GstElement *filesink = gst_element_factory_make("filesink", "file-output");
   
     /* Set caps */
@@ -56,22 +56,22 @@ int main(int argc, char *argv[])
                                            "alignment", G_TYPE_STRING, "au",
                                            NULL);
 
+    GstCaps *dmuxcaps = gst_caps_new_empty_simple("video/x-h264");
+
     /* Ensure elements were created */
-    if (!pipeline0 || !source || !srccaps || !vidconvert || !x264enc || !x264enc || !interpipesink)
+    if (!pipeline0 || !source || !srccaps || !vidconvert || !x264enc || !mpegtsmux || !interpipesink)
     {
         g_printerr("Not all elements in pipeline0 could be created.\n");
         return -1;
     }
   
-    std::cerr << "a\n";
-    if (!pipeline1 || !interpipesrc1 || !rtph264pay || !udpsink)
+    if (!pipeline1 || !interpipesrc1 || !tsdemux || !dmuxcaps || !h264parse || !rtph264pay || !udpsink)
     {
         g_printerr("Not all elements in pipeline1 could be created.\n");
         return -1;
     }
-    std::cerr << "b\n";
     
-    if (!pipeline2 || !interpipesrc2 || !mpegtsmux || !filesink)
+    if (!pipeline2 || !interpipesrc2 || !filesink)
     {
         g_printerr("Not all elements in pipeline2 could be created.\n");
         return -1;
@@ -85,6 +85,7 @@ int main(int argc, char *argv[])
                                 NULL);
   
     g_object_set(interpipesrc1, "listen-to", "source_pipe", NULL);
+    g_object_set(h264parse, "disable-passthrough", TRUE, NULL);
     g_object_set(udpsink, "host", "localhost",
                           "port", 5001,
                           NULL);
@@ -96,9 +97,9 @@ int main(int argc, char *argv[])
     g_object_set(filesink, "location", "output.ts", NULL);
 
     /* Add elements to the pipeline */
-    gst_bin_add_many(GST_BIN(pipeline0), source, vidconvert, x264enc, interpipesink, NULL);
-    gst_bin_add_many(GST_BIN(pipeline1), interpipesrc1, fakesink1, rtph264pay, udpsink, NULL);
-    gst_bin_add_many(GST_BIN(pipeline2), interpipesrc2, fakesink2, mpegtsmux, filesink, NULL);
+    gst_bin_add_many(GST_BIN(pipeline0), source, vidconvert, x264enc, mpegtsmux, interpipesink, NULL);
+    gst_bin_add_many(GST_BIN(pipeline1), interpipesrc1, tsdemux, h264parse, rtph264pay, udpsink, NULL);
+    gst_bin_add_many(GST_BIN(pipeline2), interpipesrc2, filesink, NULL);
   
     /* Link pipeline 0 */
     if (gst_element_link_filtered(source, vidconvert, srccaps) != TRUE) {
@@ -110,6 +111,7 @@ int main(int argc, char *argv[])
   
         gst_caps_unref(srccaps);
         gst_caps_unref(enccaps);
+        gst_caps_unref(dmuxcaps);
         return -1;
     }
     gst_caps_unref(srccaps);
@@ -122,42 +124,63 @@ int main(int argc, char *argv[])
         gst_object_unref(pipeline2);
 
         gst_caps_unref(enccaps);
+        gst_caps_unref(dmuxcaps);
         return -1;
     }
   
-    if (gst_element_link_filtered(x264enc, interpipesink, enccaps) != TRUE) {
-        g_printerr("x264enc and interpipesink could not be linked.\n");
+    if (gst_element_link_filtered(x264enc, mpegtsmux, enccaps) != TRUE) {
+        g_printerr("x264enc and mpegtsmux could not be linked.\n");
   
         gst_object_unref(pipeline0);
         gst_object_unref(pipeline1);
         gst_object_unref(pipeline2);
   
         gst_caps_unref(enccaps);
+        gst_caps_unref(dmuxcaps);
         return -1;
     }
     gst_caps_unref(enccaps);
+
+    if (gst_element_link(mpegtsmux, interpipesink) != TRUE) {
+        g_printerr("mpegtsmux and interpipesink could not be linked.\n");
+  
+        gst_object_unref(pipeline0);
+        gst_object_unref(pipeline1);
+        gst_object_unref(pipeline2);
+
+        gst_caps_unref(dmuxcaps);
+        return -1;
+    }
   
     /* Link pipeline 1 */
-    if (gst_element_link_many(interpipesrc1, rtph264pay, udpsink, NULL) != TRUE) {
-        g_printerr("interpipesrc1, rtph264pay, and udpsink could not be linked.\n");
+    if (gst_element_link_filtered(interpipesrc1, tsdemux, dmuxcaps) != TRUE) {
+        g_printerr("interpipesrc1 and tsdemux could not be linked.\n");
   
         gst_object_unref(pipeline0);
         gst_object_unref(pipeline1);
         gst_object_unref(pipeline2);
   
-        gst_caps_unref(enccaps);
+        gst_caps_unref(dmuxcaps);
+        return -1;
+    }
+    gst_caps_unref(dmuxcaps);
+
+    if (gst_element_link_many(tsdemux, h264parse, rtph264pay, udpsink, NULL) != TRUE) {
+        g_printerr("tsdemux, h264parse, rtph264pay, and udpsink could not be linked.\n");
+  
+        gst_object_unref(pipeline0);
+        gst_object_unref(pipeline1);
+        gst_object_unref(pipeline2);
         return -1;
     }
   
     /* Link pipeline 2 */
-    if (gst_element_link(interpipesrc2, fakesink2) != TRUE) {
-        g_printerr("interpipesrc2, mpegtsmux, and filesink could not be linked.\n");
+    if (gst_element_link(interpipesrc2, filesink) != TRUE) {
+        g_printerr("interpipesrc2 and filesink could not be linked.\n");
   
         gst_object_unref(pipeline0);
         gst_object_unref(pipeline1);
         gst_object_unref(pipeline2);
-  
-        gst_caps_unref(enccaps);
         return -1;
     }
   
