@@ -4,7 +4,7 @@
 
 void parseMessage(GstMessage *msg);
 void signalHandler(int signum);
-static void linkElements(GstElement* element,GstPad* sourcePad, gpointer sinkElement);
+void linkElements(GstElement* element,GstPad* sourcePad, gpointer sinkElement);
 
 GstElement *pipeline0;
 GstElement *pipeline1;
@@ -176,12 +176,10 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    // doesn't return if it errors in linking
+    /* Needed in order to link elements with dynamically created pads */
+    /* Note: This will not exit with an error if they fail to link! */
     g_signal_connect(tsdemux,"pad-added",G_CALLBACK(linkElements),h264parse);
     gst_caps_unref(dmuxcaps);
-
-  
-
   
     /* Link pipeline 2 */
     if (gst_element_link(interpipesrc2, filesink) != TRUE) {
@@ -305,9 +303,8 @@ void parseMessage(GstMessage *msg)
     }
 }
 
-// needed in order to link elements with dynamically created pads
-// i.e. tsdemux and h264parse
-static void linkElements(GstElement* element,GstPad* sourcePad, gpointer sinkElement){
+void linkElements(GstElement* element,GstPad* sourcePad, gpointer sinkElement)
+{
     GstPad* sinkPad=gst_element_get_static_pad((GstElement*)sinkElement,"sink");
     gst_pad_link(sourcePad,sinkPad);
     gst_object_unref(sinkPad);
