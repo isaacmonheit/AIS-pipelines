@@ -9,6 +9,8 @@ cutlery/fork
 cutlery/spoon
 cutlery/knife
 cutlery/knork
+cutlery/newknork
+cutlery/simpleknork
 
 pipeline-class/main
 pipeline-class/*.ts
