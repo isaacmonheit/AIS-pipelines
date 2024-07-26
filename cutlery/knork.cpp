@@ -2,9 +2,10 @@
 #include <iostream>
 #include <csignal>
 
-void parseMessage(GstMessage *msg);
 void signalHandler(int signum);
+gboolean busCallback(GstBus *bus, GstMessage *msg, gpointer data);
 void linkElements(GstElement* element,GstPad* sourcePad, gpointer sinkElement);
+    GMainLoop *loop;
 
 GstElement *pipeline0;
 GstElement *pipeline1;
@@ -14,9 +15,10 @@ bool stopped = false;
 
 int main(int argc, char *argv[])
 {
-    GstBus *bus0, *bus1, *bus2;
-    GstMessage *msg0, *msg1, *msg2;
+    GstBus *bus;
     GstStateChangeReturn ret;
+
+    guint bwid0, bwid1, bwid2;
   
     /* Signal handler to catch Ctrl-C */
     signal(SIGINT, signalHandler);
@@ -154,9 +156,6 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    /* Needed in order to link elements with dynamically created pads */
-    //g_signal_connect(mpegtsmux, "pad-added", G_CALLBACK(linkElements), queue);
-  
     /* Link pipeline 1 */
     if (gst_element_link_many(interpipesrc1, rtpmp2tpay, udpsink, NULL) != TRUE) {
         g_printerr("interpipesrc1, rtpmp2tpay, and udpsink could not be linked.\n");
@@ -211,33 +210,25 @@ int main(int argc, char *argv[])
         gst_object_unref(pipeline2);
         return -1;
     }
+
+    /* Get each pipeline's bus */
+    bus = gst_element_get_bus(pipeline0);
+    bwid0 = gst_bus_add_watch(bus, busCallback, NULL);
+
+    bus = gst_element_get_bus(pipeline1);
+    bwid1 = gst_bus_add_watch(bus, busCallback, NULL);
+
+    bus = gst_element_get_bus(pipeline2);
+    bwid2 = gst_bus_add_watch(bus, busCallback, NULL);
+
+    gst_object_unref(bus);
   
-    /* Wait until error or EOS */
-    bus0 = gst_element_get_bus(pipeline0);
-    bus1 = gst_element_get_bus(pipeline1);
-    bus2 = gst_element_get_bus(pipeline2);
-  
-    /* The order doesn't seem to matter */
-    msg0 =
-            gst_bus_timed_pop_filtered(bus0, GST_CLOCK_TIME_NONE,
-            static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
-    msg1 =
-            gst_bus_timed_pop_filtered(bus1, GST_CLOCK_TIME_NONE,
-            static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
-    msg2 =
-            gst_bus_timed_pop_filtered(bus2, GST_CLOCK_TIME_NONE,
-            static_cast<GstMessageType>(GST_MESSAGE_ERROR | GST_MESSAGE_EOS));
-  
+    /* Create and begin running a main loop with each bus callback */
+    loop = g_main_loop_new(NULL, FALSE);
+    g_main_loop_run(loop);
       
-    parseMessage(msg0);
-    parseMessage(msg1);
-    parseMessage(msg2);
-  
-    /* Free resources */
-    gst_object_unref(bus0);
-    gst_object_unref(bus1);
-    gst_object_unref(bus2);
-  
+
+    /* Clean up */
     gst_element_set_state(pipeline0, GST_STATE_NULL);
     gst_element_set_state(pipeline1, GST_STATE_NULL);
     gst_element_set_state(pipeline2, GST_STATE_NULL);
@@ -245,6 +236,12 @@ int main(int argc, char *argv[])
     gst_object_unref(pipeline0);
     gst_object_unref(pipeline1);
     gst_object_unref(pipeline2);
+
+    g_source_remove(bwid0);
+    g_source_remove(bwid1);
+    g_source_remove(bwid2);
+
+    g_main_loop_unref(loop);
   
     return 0;
 }
@@ -261,32 +258,50 @@ void signalHandler(int signum) {
     }
 }
 
-void parseMessage(GstMessage *msg)
+gboolean busCallback(GstBus *bus, GstMessage *msg, gpointer data)
 {
-    if (msg != NULL) {
-        GError *err;
-        gchar *debug_info;
+    //g_print("Got %s message\n", GST_MESSAGE_TYPE_NAME (msg));
+
+    switch (GST_MESSAGE_TYPE (msg))
+    {
+        case GST_MESSAGE_ERROR:
+            GError *err;
+            gchar *debug_info;
   
-        switch (GST_MESSAGE_TYPE (msg)) {
-            case GST_MESSAGE_ERROR:
-                gst_message_parse_error(msg, &err, &debug_info);
-                g_printerr("Error received from element %s: %s\n",
-                        GST_OBJECT_NAME (msg->src), err->message);
-                g_printerr("Debugging information: %s\n",
-                        debug_info ? debug_info : "none");
-                g_clear_error(&err);
-                g_free(debug_info);
-                break;
-            case GST_MESSAGE_EOS:
-                g_print("End-Of-Stream reached.\n");
-                break;
-            default:
-                /* We should not reach here because we only asked for ERRORs and EOS */
-                g_printerr("Unexpected message received.\n");
-                break;
-        }
-        gst_message_unref(msg);
+            gst_message_parse_error(msg, &err, &debug_info);
+            g_printerr("Error received from element %s: %s\n",
+                    GST_OBJECT_NAME (msg->src), err->message);
+            g_printerr("Debugging information: %s\n",
+                    debug_info ? debug_info : "none");
+
+            g_clear_error(&err);
+
+            g_error_free(err);
+            g_free(debug_info);
+
+            g_main_loop_quit(loop);
+
+            break;
+
+        case GST_MESSAGE_EOS:
+            g_print("End-Of-Stream reached.\n");
+
+            g_main_loop_quit(loop);
+            // TODO: Get the source of the message; if it's pipeline0, tell
+            // the main loop to stop. Otherwise, just chill out.
+            // We could perhaps do this with msg-src, but there might be a
+            // better way
+            // TODO: Wait until all elements have received the EOS to end the
+            // main loop
+            break;
+
+        default:
+            // Nothing should happen here... I might add functionality later
+            // for debugging though.
+            break;
     }
+
+    return TRUE;
 }
 
 void linkElements(GstElement* element, GstPad* sourcePad, gpointer sinkElement)
