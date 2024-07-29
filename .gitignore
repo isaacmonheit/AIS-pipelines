@@ -3,8 +3,6 @@ tests/demo_c
 tests/demo_appss
 tests/grog
 
-tests/output.*
-cutlery/output*
 cutlery/fork
 cutlery/spoon
 cutlery/knife
@@ -13,8 +11,10 @@ cutlery/newknork
 cutlery/simpleknork
 
 pipeline-class/main
-pipeline-class/*.ts
 
-manual-pipeline/manual_test
+manual-pipeline/av-test/manual_test
+manual-pipeline/fs-test/manual_test
+manual-pipeline/fs-test/working
+manual-pipeline/class-test/class-test
 
 **/output*
